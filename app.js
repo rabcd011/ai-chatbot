@@ -1,18 +1,39 @@
-// Placeholder URL for your backend API (we will set up the actual backend in Step 6)
-const BACKEND_URL = 'https://ai-chatbot-backend-9923.onrender.com';
+// URL of your live Render backend service
+const BACKEND_URL = 'https://ai-chatbot-backend-9923.onrender.com/api/chat';
 
-async function sendMessage() {
-  const inputElement = document.getElementById('user-input');
-  const message = inputElement.value.trim();
+// DOM Elements
+const chatMessages = document.getElementById('chat-messages');
+const userInput = document.getElementById('user-input');
+const sendBtn = document.getElementById('send-btn');
+
+// Function to append a message bubble to the chat container
+function appendMessage(sender, text) {
+  const messageDiv = document.createElement('div');
+  messageDiv.classList.add('message', `${sender}-message`);
   
-  if (!message) return;
+  const contentDiv = document.createElement('div');
+  contentDiv.classList.add('message-content');
+  contentDiv.textContent = text;
+  
+  messageDiv.appendChild(contentDiv);
+  chatMessages.appendChild(messageDiv);
+  
+  // Scroll to bottom
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+  return messageDiv;
+}
 
-  // Display user's message in the chat UI
-  appendMessage(message, 'user-message');
-  inputElement.value = '';
+// Function to send message to backend and receive response
+async function sendMessage() {
+  const messageText = userInput.value.trim();
+  if (!messageText) return;
 
-  // Show a temporary loading message from the AI
-  const loadingId = appendMessage('Thinking...', 'ai-message');
+  // Display user message in UI
+  appendMessage('user', messageText);
+  userInput.value = '';
+
+  // Show temporary "Typing..." message from AI
+  const loadingMessage = appendMessage('bot', 'Typing...');
 
   try {
     const response = await fetch(BACKEND_URL, {
@@ -20,36 +41,33 @@ async function sendMessage() {
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ message: message })
+      body: JSON.stringify({ message: messageText })
     });
 
+    if (!response.ok) {
+      throw new Error(`Server status: ${response.status}`);
+    }
+
     const data = await response.json();
-    
-    // Replace thinking indicator with actual response
-    updateMessage(loadingId, data.reply || 'No response received.');
+
+    // Replace "Typing..." with actual AI response
+    if (data.reply) {
+      loadingMessage.querySelector('.message-content').textContent = data.reply;
+    } else {
+      loadingMessage.querySelector('.message-content').textContent = 'Error: Received empty response from server.';
+    }
   } catch (error) {
-    updateMessage(loadingId, 'Error connecting to the backend server.');
+    console.error('Error connecting to backend:', error);
+    loadingMessage.querySelector('.message-content').textContent = 
+      'Error connecting to the backend server. If the server was sleeping, please wait 1 minute and try again.';
   }
 }
 
-function appendMessage(text, className) {
-  const chatBox = document.getElementById('chat-box');
-  const messageElement = document.createElement('div');
-  const uniqueId = 'msg-' + Date.now();
-  
-  messageElement.id = uniqueId;
-  messageElement.className = `message ${className}`;
-  messageElement.innerText = text;
-  
-  chatBox.appendChild(messageElement);
-  chatBox.scrollTop = chatBox.scrollHeight;
-  
-  return uniqueId;
-}
+// Event Listeners
+sendBtn.addEventListener('click', sendMessage);
 
-function updateMessage(id, newText) {
-  const messageElement = document.getElementById(id);
-  if (messageElement) {
-    messageElement.innerText = newText;
+userInput.addEventListener('keypress', (e) => {
+  if (e.key === 'Enter') {
+    sendMessage();
   }
-}
+});

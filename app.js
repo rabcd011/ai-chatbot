@@ -1,5 +1,5 @@
 // Placeholder URL for your backend API (we will set up the actual backend in Step 6)
-const BACKEND_URL = 'https://YOUR-BACKEND-URL.onrender.com/api/chat';
+const BACKEND_URL = 'https://ai-chatbot-backend-9923.onrender.com';
 
 async function sendMessage() {
   const inputElement = document.getElementById('user-input');

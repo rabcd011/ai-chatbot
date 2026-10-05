@@ -1,13 +1,16 @@
-// URL of your live Render backend service
 const BACKEND_URL = 'https://ai-chatbot-backend-9923.onrender.com/api/chat';
 
-// DOM Elements
 const chatMessages = document.getElementById('chat-messages');
 const userInput = document.getElementById('user-input');
 const sendBtn = document.getElementById('send-btn');
 
-// Function to append a message bubble to the chat container
 function appendMessage(sender, text) {
+  const container = document.getElementById('chat-messages');
+  if (!container) {
+    console.error("Could not find element with id 'chat-messages'");
+    return null;
+  }
+
   const messageDiv = document.createElement('div');
   messageDiv.classList.add('message', `${sender}-message`);
   
@@ -16,58 +19,53 @@ function appendMessage(sender, text) {
   contentDiv.textContent = text;
   
   messageDiv.appendChild(contentDiv);
-  chatMessages.appendChild(messageDiv);
-  
-  // Scroll to bottom
-  chatMessages.scrollTop = chatMessages.scrollHeight;
+  container.appendChild(messageDiv);
+  container.scrollTop = container.scrollHeight;
   return messageDiv;
 }
 
-// Function to send message to backend and receive response
 async function sendMessage() {
-  const messageText = userInput.value.trim();
+  const inputEl = document.getElementById('user-input');
+  if (!inputEl) return;
+
+  const messageText = inputEl.value.trim();
   if (!messageText) return;
 
-  // Display user message in UI
   appendMessage('user', messageText);
-  userInput.value = '';
+  inputEl.value = '';
 
-  // Show temporary "Typing..." message from AI
   const loadingMessage = appendMessage('bot', 'Typing...');
 
   try {
     const response = await fetch(BACKEND_URL, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ message: messageText })
     });
 
     if (!response.ok) {
-      throw new Error(`Server status: ${response.status}`);
+      throw new Error(`Server returned status ${response.status}`);
     }
 
     const data = await response.json();
-
-    // Replace "Typing..." with actual AI response
-    if (data.reply) {
-      loadingMessage.querySelector('.message-content').textContent = data.reply;
-    } else {
-      loadingMessage.querySelector('.message-content').textContent = 'Error: Received empty response from server.';
+    if (loadingMessage) {
+      loadingMessage.querySelector('.message-content').textContent = data.reply || 'No response generated.';
     }
   } catch (error) {
-    console.error('Error connecting to backend:', error);
-    loadingMessage.querySelector('.message-content').textContent = 
-      'Error connecting to the backend server. If the server was sleeping, please wait 1 minute and try again.';
+    console.error('Error:', error);
+    if (loadingMessage) {
+      loadingMessage.querySelector('.message-content').textContent = 
+        'Error connecting to backend. If the server was sleeping, please wait 1 minute and try again.';
+    }
   }
 }
 
-// Event Listeners
-sendBtn.addEventListener('click', sendMessage);
+if (sendBtn) {
+  sendBtn.addEventListener('click', sendMessage);
+}
 
-userInput.addEventListener('keypress', (e) => {
-  if (e.key === 'Enter') {
-    sendMessage();
-  }
-});
+if (userInput) {
+  userInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') sendMessage();
+  });
+}
